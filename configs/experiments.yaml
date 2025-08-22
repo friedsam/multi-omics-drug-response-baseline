@@ -1,0 +1,17 @@
+# Minimal experiment matrix for Phase 1–2
+runs:
+  - name: baseline_complete
+    missingness: none
+    model: logistic
+  - name: baseline_mcar_30
+    missingness: mcar
+    missing_rate: 0.3
+    model: random_forest
+  - name: block_missing_proteomics
+    missingness: block_modality
+    block: proteomics
+    model: random_forest
+  - name: mask_aware_nn_mcar_30
+    missingness: mcar
+    missing_rate: 0.3
+    model: mask_aware_nn
