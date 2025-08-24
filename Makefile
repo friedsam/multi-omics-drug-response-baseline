@@ -101,8 +101,23 @@ docker-run-api:
 	docker run --rm -p 8000:8000 multiomics:api
 
 # ---- run / utilities ----
+
+.PHONY: run run-p1 run-p2 run-p2b run-pg freeze clean
+
 run:
-	$(PY) scripts/train.py --config configs/experiments.yaml
+	$(PY) scripts/run_experiments.py --cfg configs/experiments.yaml
+
+run-p1:
+	$(PY) scripts/run_experiments.py --cfg configs/experiments.yaml --id p1_tcga_baseline
+
+run-p2:
+	$(PY) scripts/run_experiments.py --cfg configs/experiments.yaml --id p2_tcga_impute_matrix
+
+run-p2b:
+	$(PY) scripts/run_experiments.py --cfg configs/experiments.yaml --id p2b_tcga_deconf_ood
+
+run-pg:
+	$(PY) scripts/run_experiments.py --cfg configs/experiments.yaml --id p1_pg_baseline_gdsc
 
 freeze:
 	$(PIP) freeze | sed '/^@/d' > requirements-lock.txt
