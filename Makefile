@@ -84,6 +84,20 @@ conda-env:
 	    pytorch cpuonly -c pytorch -c conda-forge
 	@echo "[ok] conda-only env ready: $(ENV_NAME)"
 
+.PHONY: docker-build-train docker-run-train docker-build-api docker-run-api
+
+docker-build-train:
+	docker build --target train -t multiomics:train .
+
+docker-run-train:
+	docker run --rm -it -v $(PWD)/data:/app/data multiomics:train
+
+docker-build-api:
+	docker build --target api -t multiomics:api .
+
+docker-run-api:
+	docker run --rm -p 8000:8000 multiomics:api
+
 # ---- run / utilities ----
 run:
 	$(PY) scripts/train.py --config configs/experiments.yaml
