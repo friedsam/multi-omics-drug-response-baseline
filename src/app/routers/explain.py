@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 import numpy as np
 import shap
-from src.app.models.registry import load_model
+from app.models.registry import load_model
 
 router = APIRouter(prefix="/explain", tags=["explain"])
 
