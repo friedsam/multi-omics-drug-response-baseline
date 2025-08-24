@@ -84,6 +84,8 @@ conda-env:
 	    pytorch cpuonly -c pytorch -c conda-forge
 	@echo "[ok] conda-only env ready: $(ENV_NAME)"
 
+# ------ DOCKER section ----------------------------------------------
+
 .PHONY: docker-build-train docker-run-train docker-build-api docker-run-api
 
 docker-build-train:
