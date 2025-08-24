@@ -22,5 +22,3 @@ shap>=0.45,<1
 # Optional tuning / OOD
 optuna>=4,<5
 
-# Extra tools
-pyyaml>=6.0,<7
