@@ -1,5 +1,6 @@
-# Phase 1 — TCGA baseline (binary proxy)
-- id: p1_tcga_baseline
+# experiments.yaml — canonical matrix for runs (Phase 1, 2, 2b, pharmacogenomic)
+
+- id: p1_tcga_baseline                # Phase 1 — TCGA baseline (binary proxy)
   track: tcga
   endpoint: binary
   model: logistic
@@ -8,35 +9,36 @@
   ood: {leave_tissue_out: false}
   uncertainty: {conformal: false, mc_dropout: false, ensembles: 0}
 
-# Phase 2 — handling missing modality
-- id: p2_tcga_impute_matrix
+- id: p2_tcga_impute_matrix           # Phase 2 — handle missing modality via matrix completion
   track: tcga
+  endpoint: binary
   model: gbm
   imputation: {strategy: soft_impute, target_modalities: [proteome]}
   missingness: [block_proteome]
-  confounds: {use_residualize: true, confound_cols: [tissue, batch]}
-  uncertainty: {conformal: true}
+  confounds: {use_residualize: true, use_combat: false, confound_cols: [tissue, batch]}
+  ood: {leave_tissue_out: false}
+  uncertainty: {conformal: true, mc_dropout: false, ensembles: 0}
 
-# Phase 2b — deconfounding + OOD split
-- id: p2b_tcga_deconf_ood
+- id: p2b_tcga_deconf_ood             # Phase 2b — deconfounding + leave-tissue-out OOD
   track: tcga
+  endpoint: binary
   model: rf
-  confounds: {use_residualize: true, confound_cols: [tissue, batch]}
+  missingness: [none, block_proteome]
+  confounds: {use_residualize: true, use_combat: false, confound_cols: [tissue, batch]}
   ood: {leave_tissue_out: true}
-  uncertainty: {conformal: true, ensembles: 5}
+  uncertainty: {conformal: true, mc_dropout: false, ensembles: 5}
 
-# Pharmacogenomic track (GDSC/CTRP/LINCS)
-- id: p1_pg_baseline_gdsc
+- id: p1_pg_baseline_gdsc             # Pharmacogenomic track — GDSC baseline (regression)
   track: gdsc
   endpoint: regression
   model: gbm
   missingness: [none, mcar_20, block_proteome]
-  confounds: {use_residualize: true, confound_cols: [tissue]}
-  uncertainty: {conformal: true}
+  confounds: {use_residualize: true, use_combat: false, confound_cols: [tissue]}
+  ood: {leave_tissue_out: false}
+  uncertainty: {conformal: true, mc_dropout: false, ensembles: 0}
 
-# Optional knowledge-enriched features
 globals:
   features:
-    use_kg: false       # set true once kg features land
+    use_kg: false                     # enable later when KG features land
   api:
     expose_explain: true
