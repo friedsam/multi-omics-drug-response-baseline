@@ -1,17 +1,42 @@
-# Minimal experiment matrix for Phase 1–2
-runs:
-  - name: baseline_complete
-    missingness: none
-    model: logistic
-  - name: baseline_mcar_30
-    missingness: mcar
-    missing_rate: 0.3
-    model: random_forest
-  - name: block_missing_proteomics
-    missingness: block_modality
-    block: proteomics
-    model: random_forest
-  - name: mask_aware_nn_mcar_30
-    missingness: mcar
-    missing_rate: 0.3
-    model: mask_aware_nn
+# Phase 1 — TCGA baseline (binary proxy)
+- id: p1_tcga_baseline
+  track: tcga
+  endpoint: binary
+  model: logistic
+  missingness: [none, mcar_20, block_proteome, mnar_tissue]
+  confounds: {use_residualize: false, use_combat: false, confound_cols: [tissue, batch]}
+  ood: {leave_tissue_out: false}
+  uncertainty: {conformal: false, mc_dropout: false, ensembles: 0}
+
+# Phase 2 — handling missing modality
+- id: p2_tcga_impute_matrix
+  track: tcga
+  model: gbm
+  imputation: {strategy: soft_impute, target_modalities: [proteome]}
+  missingness: [block_proteome]
+  confounds: {use_residualize: true, confound_cols: [tissue, batch]}
+  uncertainty: {conformal: true}
+
+# Phase 2b — deconfounding + OOD split
+- id: p2b_tcga_deconf_ood
+  track: tcga
+  model: rf
+  confounds: {use_residualize: true, confound_cols: [tissue, batch]}
+  ood: {leave_tissue_out: true}
+  uncertainty: {conformal: true, ensembles: 5}
+
+# Pharmacogenomic track (GDSC/CTRP/LINCS)
+- id: p1_pg_baseline_gdsc
+  track: gdsc
+  endpoint: regression
+  model: gbm
+  missingness: [none, mcar_20, block_proteome]
+  confounds: {use_residualize: true, confound_cols: [tissue]}
+  uncertainty: {conformal: true}
+
+# Optional knowledge-enriched features
+globals:
+  features:
+    use_kg: false       # set true once kg features land
+  api:
+    expose_explain: true
