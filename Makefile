@@ -127,53 +127,60 @@ clean:
 	find . -type d -name "__pycache__" -prune -exec rm -rf {} +
 	find . -type d -name ".pytest_cache" -prune -exec rm -rf {} +
 
-# ---- data: TCGA from UCSC Xena ----
-DATA_DIR := data/raw/tcga
-XENA_RNASEQ := https://toil-xena-hub.s3.us-east-1.amazonaws.com/download/tcga_RSEM_gene_tpm.gz
-XENA_CDR    := https://tcga-pancan-atlas-hub.s3.us-east-1.amazonaws.com/download/Survival_SupplementalTable_S1_20171025_xena_sp
+# ---- data: TCGA from UCSC Xena (split dirs) ----
+XENA_TCGA_DIR := data/raw/tcga
+XENA_SUPP_DIR := data/raw/supplemental
+XENA_RNASEQ   := https://toil-xena-hub.s3.us-east-1.amazonaws.com/download/tcga_RSEM_gene_tpm.gz
+XENA_CDR      := https://tcga-pancan-atlas-hub.s3.us-east-1.amazonaws.com/download/Survival_SupplementalTable_S1_20171025_xena_sp
 
-$(DATA_DIR):
-	mkdir -p $(DATA_DIR)
+$(XENA_TCGA_DIR) $(XENA_SUPP_DIR):
+	mkdir -p $(XENA_TCGA_DIR) $(XENA_SUPP_DIR)
 
-$(DATA_DIR)/tcga_RSEM_gene_tpm.gz: | $(DATA_DIR)
+$(XENA_TCGA_DIR)/tcga_RSEM_gene_tpm.gz: | $(XENA_TCGA_DIR)
 	curl -L -o $@ $(XENA_RNASEQ)
 
-$(DATA_DIR)/Survival_SupplementalTable_S1_20171025_xena_sp: | $(DATA_DIR)
+$(XENA_SUPP_DIR)/Survival_SupplementalTable_S1_20171025_xena_sp: | $(XENA_SUPP_DIR)
 	curl -L -o $@ $(XENA_CDR)
 
 .PHONY: data-tcga
-data-tcga: $(DATA_DIR)/tcga_RSEM_gene_tpm.gz \
-           $(DATA_DIR)/Survival_SupplementalTable_S1_20171025_xena_sp
-	@echo "✓ TCGA downloads ready under $(DATA_DIR)"
+data-tcga: $(XENA_TCGA_DIR)/tcga_RSEM_gene_tpm.gz \
+           $(XENA_SUPP_DIR)/Survival_SupplementalTable_S1_20171025_xena_sp
+	@echo "✓ TCGA downloads ready under data/raw/{tcga,supplemental}"
 
 # ---- Real-data ingest (minimal, macOS-safe) ----
-DATA_DIR      ?= data
-RAW_DIR       := $(DATA_DIR)/raw
-TCGA_DIR      := $(RAW_DIR)/tcga
-SUPP_DIR      := $(RAW_DIR)/supplemental
+DATA_ROOT     ?= data/raw
+TCGA_DIR      := $(DATA_ROOT)/tcga
+SUPP_DIR      := $(DATA_ROOT)/supplemental
 INGEST_SCRIPT := scripts/ingest_real_data.sh
 
 TCGA_SHA256    ?=
 SUPP_SHA256    ?=
 
-.PHONY: help data-real
-help:
-	@echo "Usage:"
-	@echo "  make data-real PATH_TCGA_GZ=/abs/path/tcga_RSEM_gene_tpm.gz \\"
-	@echo "                 PATH_SUPP=/abs/path/Survival_SupplementalTable_S1_20171025_xena_sp(.txt|.tsv|.csv)"
-	@echo ""
-	@echo "Outputs:"
-	@echo "  $(TCGA_DIR)/tcga_RSEM_gene_tpm.gz  (and .tsv if gzip is extractable)"
-	@echo "  $(SUPP_DIR)/<your-supp-file>"
-
+.PHONY: data-real
 data-real: $(INGEST_SCRIPT)
-	@mkdir -p "$(RAW_DIR)/tcga" "$(RAW_DIR)/supplemental"
+	@echo "DEBUG: DATA_ROOT=$(DATA_ROOT)"
+	@echo "DEBUG: TCGA_DIR=$(TCGA_DIR)"
+	@echo "DEBUG: SUPP_DIR=$(SUPP_DIR)"
+	@mkdir -p "$(TCGA_DIR)" "$(SUPP_DIR)"
 	@/bin/sh "$(INGEST_SCRIPT)" \
-		--tcga-gz  "$${PATH_TCGA_GZ:?set PATH_TCGA_GZ=/abs/path/file.gz}" \
-		--supp     "$${PATH_SUPP:?set PATH_SUPP=/abs/path/supp_table}" \
-		--tcga-out "$(RAW_DIR)/tcga" \
-		--supp-out "$(RAW_DIR)/supplemental"
-	@echo "✅ Ingest complete → $(RAW_DIR)"
+		--tcga-gz  "$(TCGA_DIR)/tcga_RSEM_gene_tpm.gz" \
+		--supp     "$(SUPP_DIR)/Survival_SupplementalTable_S1_20171025_xena_sp" \
+		--tcga-out "$(TCGA_DIR)" \
+		--supp-out "$(SUPP_DIR)"
+	@echo "✅ Ingest complete → $(DATA_ROOT)"
 
 data-clean:
 	@find "$(PROC_DIR)" -mindepth 1 -maxdepth 1 -print -exec rm -rf {} \;
+
+.PHONY: data-reset
+data-reset:
+	@echo "🧹 Removing ALL raw data..."
+	rm -rf data/raw
+	mkdir -p data/raw
+	@echo "⬇️  Downloading TCGA data..."
+	$(MAKE) data-tcga
+	@echo "📥 Ingesting real data..."
+	$(MAKE) data-real \
+		PATH_TCGA_GZ="$(PWD)/data/raw/tcga/tcga_RSEM_gene_tpm.gz" \
+		PATH_SUPP="$(PWD)/data/raw/tcga/Survival_SupplementalTable_S1_20171025_xena_sp"
+	@echo "✅ Fresh data reset complete!"
