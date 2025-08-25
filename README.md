@@ -62,6 +62,34 @@ make docker-build-api
 make docker-run-api
 ```
 
+## Download & Ingest Data
+
+1. Download TCGA data:
+   ```bash
+   make data-tcga
+   ```
+   Downloads into:
+   - `data/raw/tcga/tcga_RSEM_gene_tpm.gz`
+   - `data/raw/supplemental/Survival_SupplementalTable_S1_20171025_xena_sp`
+
+2. Ingest and preprocess:
+   ```bash
+   make data-real
+   ```
+   Extracts `.tsv`, skips duplicate copies, and organizes:
+   ```
+   data/raw/
+     ├── tcga/
+     │   ├── tcga_RSEM_gene_tpm.gz
+     │   └── tcga_RSEM_gene_tpm.tsv
+     └── supplemental/
+         └── Survival_SupplementalTable_S1_20171025_xena_sp
+   ```
+
+3. Full reset (clean and reload end-to-end):
+   ```bash
+   make data-reset
+
 ## Roadmap (execution order)
 1. **Phase 1:** Baselines under complete vs missing data (MCAR, block-missing). Metrics: AUROC/AUPRC.
 2. **Phase 2:** Simple robustness methods: mean/zero + mask, matrix completion (softImpute), cross-modal ridge (RNA→pseudo-proteome).
