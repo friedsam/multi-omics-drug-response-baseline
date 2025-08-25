@@ -98,3 +98,15 @@ checkpoints/
 
 # Dark Matter internal file
 README_darkmatter.md
+
+
+# raw + processed data (ignore all)
+data/raw/**
+data/processed/**
+reports/artifacts/**
+
+# allow empty dirs for scaffolding
+!data/**/.gitkeep
+
+# keep provenance (checksums)
+!data/**/_checksums.txt

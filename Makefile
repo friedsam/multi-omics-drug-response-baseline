@@ -126,3 +126,54 @@ freeze:
 clean:
 	find . -type d -name "__pycache__" -prune -exec rm -rf {} +
 	find . -type d -name ".pytest_cache" -prune -exec rm -rf {} +
+
+# ---- data: TCGA from UCSC Xena ----
+DATA_DIR := data/raw/tcga
+XENA_RNASEQ := https://toil-xena-hub.s3.us-east-1.amazonaws.com/download/tcga_RSEM_gene_tpm.gz
+XENA_CDR    := https://tcga-pancan-atlas-hub.s3.us-east-1.amazonaws.com/download/Survival_SupplementalTable_S1_20171025_xena_sp
+
+$(DATA_DIR):
+	mkdir -p $(DATA_DIR)
+
+$(DATA_DIR)/tcga_RSEM_gene_tpm.gz: | $(DATA_DIR)
+	curl -L -o $@ $(XENA_RNASEQ)
+
+$(DATA_DIR)/Survival_SupplementalTable_S1_20171025_xena_sp: | $(DATA_DIR)
+	curl -L -o $@ $(XENA_CDR)
+
+.PHONY: data-tcga
+data-tcga: $(DATA_DIR)/tcga_RSEM_gene_tpm.gz \
+           $(DATA_DIR)/Survival_SupplementalTable_S1_20171025_xena_sp
+	@echo "✓ TCGA downloads ready under $(DATA_DIR)"
+
+# ---- Real-data ingest (minimal, macOS-safe) ----
+DATA_DIR      ?= data
+RAW_DIR       := $(DATA_DIR)/raw
+TCGA_DIR      := $(RAW_DIR)/tcga
+SUPP_DIR      := $(RAW_DIR)/supplemental
+INGEST_SCRIPT := scripts/ingest_real_data.sh
+
+TCGA_SHA256    ?=
+SUPP_SHA256    ?=
+
+.PHONY: help data-real
+help:
+	@echo "Usage:"
+	@echo "  make data-real PATH_TCGA_GZ=/abs/path/tcga_RSEM_gene_tpm.gz \\"
+	@echo "                 PATH_SUPP=/abs/path/Survival_SupplementalTable_S1_20171025_xena_sp(.txt|.tsv|.csv)"
+	@echo ""
+	@echo "Outputs:"
+	@echo "  $(TCGA_DIR)/tcga_RSEM_gene_tpm.gz  (and .tsv if gzip is extractable)"
+	@echo "  $(SUPP_DIR)/<your-supp-file>"
+
+data-real: $(INGEST_SCRIPT)
+	@mkdir -p "$(RAW_DIR)/tcga" "$(RAW_DIR)/supplemental"
+	@/bin/sh "$(INGEST_SCRIPT)" \
+		--tcga-gz  "$${PATH_TCGA_GZ:?set PATH_TCGA_GZ=/abs/path/file.gz}" \
+		--supp     "$${PATH_SUPP:?set PATH_SUPP=/abs/path/supp_table}" \
+		--tcga-out "$(RAW_DIR)/tcga" \
+		--supp-out "$(RAW_DIR)/supplemental"
+	@echo "✅ Ingest complete → $(RAW_DIR)"
+
+data-clean:
+	@find "$(PROC_DIR)" -mindepth 1 -maxdepth 1 -print -exec rm -rf {} \;
